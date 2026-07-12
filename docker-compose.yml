@@ -1,0 +1,55 @@
+services:
+
+  flask:
+    build: .
+    container_name: haru_flask
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=haru_db
+      - DB_USER=haru_user
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+
+  mysql:
+    image: mysql:8.0
+    container_name: haru_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=haru_db
+      - MYSQL_USER=haru_user
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+  image: grafana/grafana
+  container_name: haru_grafana
+  ports:
+    - "3000:3000"
+  environment:
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    - GF_SECURITY_ALLOW_EMBEDDING=true
+    - GF_AUTH_ANONYMOUS_ENABLED=true
+    - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+  volumes:
+    - grafana_data:/var/lib/grafana
+  depends_on:
+    - mysql
+
+volumes:
+  mysql_data:
+  grafana_data:

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.A.R.U — {{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <!----------------------------------------------------------- Sidebar Layout Components ------------------------------------------------------------------------------>
+    <aside class="sidebar">
+        <div>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='HARU.png') }}" alt="HARU Logo" class="logo-img">
+                <span class="brand-name">H.A.R.U</span>
+            </div>
+            <ul class="nav-links">
+                <li class="nav-item" onclick="window.location.href='/chat'">New Chat</li>
+                <li class="nav-item" onclick="document.getElementById('csvUpload').click()">📄 Upload CSV File</li>
+                <li class="nav-item" onclick="window.location.href='/dashboard'">📊 Monthly Dashboard</li>
+                <li class="nav-item {{ 'active' if direction == 'income' }}" onclick="window.location.href='/income'">💰 Income Log</li>
+                <li class="nav-item {{ 'active' if direction == 'expense' }}" onclick="window.location.href='/expenses'">📉 Expenses Log</li>
+            </ul>
+            <input type="file" id="csvUpload" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+        </div>
+        <div class="nav-item" style="margin-bottom: 0;">Settings</div>
+    </aside>
+
+    <main class="main-container" style="padding: 24px; overflow-y: auto;">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h1>{{ title }}</h1>
+            <div class="total-badge">
+                Total: €{{ "%.2f"|format(total) }}
+            </div>
+        </div>
+
+        <!-- Search and filter -->
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <input type="text" id="searchInput" placeholder="Search merchant or category..." 
+                   onkeyup="filterTable()" class="chat-input" style="max-width:300px; padding: 8px 12px;">
+        </div>
+
+        <div class="log-table-wrapper">
+            <table class="log-table" id="logTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Merchant</th>
+                        <th>Category</th>
+                        <th>Place</th>
+                        <th>Amount (€)</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ t.date }}</td>
+                        <td>{{ t.counterparty }}</td>
+                        <td><span class="category-badge">{{ t.category }}</span></td>
+                        <td>{{ t.place }}</td>
+                        <td>€{{ "%.2f"|format(t.amount) }}</td>
+                        <td>{{ t.source }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script>
+        function filterTable() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#logTable tbody tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
+        }
+    </script>
+
+</body>
+</html>

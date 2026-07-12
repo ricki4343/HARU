@@ -1,0 +1,10 @@
+flask
+flask-sqlalchemy
+pymysql
+scikit-learn==1.8.0
+joblib
+openai
+python-dotenv
+sqlalchemy
+pandas
+gunicorn

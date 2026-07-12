@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.A.R.U — Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <!----------------------------------------------------------- Sidebar Layout Components ------------------------------------------------------------------------------>
+    <aside class="sidebar">
+        <div>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='HARU.png') }}" alt="HARU Logo" class="logo-img">
+                <span class="brand-name">H.A.R.U</span>
+            </div>
+            <ul class="nav-links">
+                <li class="nav-item" onclick="window.location.href='/chat'">New Chat</li>
+                <li class="nav-item" onclick="document.getElementById('csvUpload').click()">📄 Upload CSV File</li>
+                <li class="nav-item active">📊 Monthly Dashboard</li>
+                <li class="nav-item" onclick="window.location.href='/income'">💰 Income Log</li>
+                <li class="nav-item" onclick="window.location.href='/expenses'">📉 Expenses Log</li>
+            </ul>
+            <input type="file" id="csvUpload" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+        </div>
+        <div class="nav-item" style="margin-bottom: 0;">Settings</div>
+    </aside>
+
+    <main class="main-container" style="padding: 24px; overflow-y: auto;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+            <h1>📊 Monthly Dashboard</h1>
+            <select id="monthPicker" onchange="updateDashboard()">
+                <option value="all">All time</option>
+            </select>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-panel">
+                <h3>Monthly Spending Trend</h3>
+                <iframe id="panel-1" src="..." width="100%" height="300" frameborder="0"></iframe>
+            </div>
+
+            <div class="dashboard-panel">
+                <h3>Spending by Category</h3>
+                <iframe id="panel-2" src="..." width="100%" height="300" frameborder="0"></iframe>
+            </div>
+
+            <div class="dashboard-panel">
+                <h3>Top 5 Merchants</h3>
+                <iframe id="panel-3" src="..." width="100%" height="300" frameborder="0"></iframe>
+            </div>
+        </div>
+    </main>
+
+
+<script>
+    const BASE_URL = 'http://52.209.194.206:3000/d-solo/adqsz4d/haru';
+
+    function getTimestamps(monthStr) {
+        if (monthStr === 'all') {
+            return {
+                from: new Date('2024-11-01').getTime(),
+                to: new Date().getTime()
+            };
+        }
+        const [year, month] = monthStr.split('-').map(Number);
+        const from = new Date(year, month - 1, 1).getTime();
+        const to = new Date(year, month, 0, 23, 59, 59).getTime();
+        return { from, to };
+    }
+
+    function populateMonthPicker() {
+        const select = document.getElementById('monthPicker');
+        const now = new Date();
+        const start = new Date('2024-11-01');
+
+        let date = new Date(now.getFullYear(), now.getMonth(), 1);
+        while (date >= start) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const value = `${year}-${month}`;
+            const label = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const option = document.createElement('option');
+            option.value = value;
+            option.innerText = label;
+            select.appendChild(option);
+
+            date.setMonth(date.getMonth() - 1);
+        }
+    }
+
+    function updateDashboard() {
+        const monthStr = document.getElementById('monthPicker').value;
+        const { from, to } = getTimestamps(monthStr);
+
+        // Panel 1 is a time series, uses from/to
+        const panel1 = document.getElementById('panel-1');
+        if (panel1) {
+            panel1.src = `${BASE_URL}?orgId=1&from=${from}&to=${to}&timezone=browser&panelId=panel-1`;
+        }
+
+        // Panels 2 and 3 use ${month} variable
+        const varMonth = monthStr === 'all' ? '$__all' : monthStr;
+        ['panel-2', 'panel-3'].forEach(panelId => {
+            const iframe = document.getElementById(panelId);
+            if (iframe) {
+                iframe.src = `${BASE_URL}?orgId=1&from=${from}&to=${to}&timezone=browser&var-month=${varMonth}&panelId=${panelId}`;
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        populateMonthPicker();
+        updateDashboard();
+    });
+</script>
+
+</body>
+</html>

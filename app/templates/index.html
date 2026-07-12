@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.A.R.U. — Home Accounting & Resource Utility</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <!----------------------------------------------------------- Sidebar Layout Components ------------------------------------------------------------------------------>
+    <aside class="sidebar">
+        <div>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='HARU.png') }}" alt="HARU Logo" class="logo-img">
+                <span class="brand-name">H.A.R.U</span>
+            </div>
+            <ul class="nav-links">
+                <li class="nav-item active">New Chat</li>
+                <li class="nav-item" onclick="document.getElementById('csvUpload').click()">📄 Upload CSV File</li>
+                <li class="nav-item" onclick="window.location.href='/dashboard'">📊 Monthly Dashboard</li>
+                <li class="nav-item" onclick="window.location.href='/income'">💰 Income Log</li>
+                <li class="nav-item" onclick="window.location.href='/expenses'">📉 Expenses Log</li>
+            </ul>
+            <input type="file" id="csvUpload" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+        </div>
+        <div class="nav-item" style="margin-bottom: 0;">Settings</div>
+    </aside>
+
+    <!------------------------------------------------------------- Main Workspace ---------------------------------------------------------------------------------------->
+    <main class="main-container">
+        
+        <!-- Welcome Screen Block -->
+        <div class="welcome-screen">
+            <!-- Using the verbatim referenced file "HARU.png" -->
+             <div class="logo-crop-box">
+                <img src="{{ url_for('static', filename='HARU.png') }}" alt="HARU Logo Big" class="welcome-logo">
+             </div>
+
+            <p style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">Home Accounting & Resource Utility</p>
+            <h1 style="margin-top: 0; margin-bottom: 8px;">How can I help you today?</h1>
+
+
+            <!---------------------------------------------------- The 4 Action Cards -------------------------------------------------------------------->
+            <div class="suggestions">
+
+                <div class="card" onclick="openModal('income')">
+                    <strong>💰 Log Income</strong>
+                    <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.85rem;">Quickly add a paycheck or freelance earnings.</p>
+                </div>
+
+                <div class="card" onclick="openModal('expense')">
+                    <strong>📉 Record Expense</strong>
+                    <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.85rem;">Track your groceries, bills, or subscription spends.</p>
+                </div>
+
+                <div class="card" onclick="fillInput('How much did I spend this month?')">
+                    <strong>📊 Monthly Summary</strong>
+                    <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.85rem;">Review your current budget standing.</p>
+                </div>
+
+                <div class="card" onclick="fillInput('Am I on track with my savings goal?')">
+                    <strong>💡 Budget Advice (in development)</strong>
+                    <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.85rem;">Check if you are hitting your financial milestones.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-------------------------------------------------- Chat Messages Area -------------------------------------------------->
+        <div id="chatMessages" class="chat-messages"></div>
+
+        <!-- Sticky Bottom Search Input -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Ask me to log a transaction or check your balances...">
+                <button class="send-btn" aria-label="Send message">
+                    <!-- Clean SVG Send Icon -->
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+    // ================================================ Fill input from quick action cards
+    function fillInput(text) {
+        const input = document.getElementById('chatInput');
+        input.value = text;
+        input.focus();
+    }
+    
+
+    // ================================================ Display structured conversation bubbles
+    function appendMessage(role, text) {
+        const messagesContainer = document.getElementById('chatMessages');
+    
+
+        // Create the outer row wrapper
+        const row = document.createElement('div');
+        row.classList.add('message-row', role);
+
+
+        // If it's HARU speaking, prepend the cute small avatar icon
+        if (role === 'haru') {
+            const avatar = document.createElement('img');
+            // Serves your VERBATIM asset "HARU.png" out of your Flask static context
+            avatar.src = "{{ url_for('static', filename='HARU.png') }}";
+            avatar.classList.add('chat-avatar');
+            avatar.alt = "HARU";
+            row.appendChild(avatar);
+        }
+
+        // Create Content block container
+        const content = document.createElement('div');
+        content.classList.add('message-content');
+
+
+        // Add small text sender header identity trace
+        const label = document.createElement('div');
+        label.classList.add('sender-label');
+        label.innerText = role === 'user' ? 'You' : 'H.A.R.U';
+        content.appendChild(label);
+
+
+        // Create the text bubble container itself
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble');
+    
+
+        //  Handle loading text style neatly
+        if (text === 'thinking...') {
+            bubble.innerHTML = '<span style="font-style: italic; color: var(--text-muted);">thinking...</span>';
+        } else {
+            bubble.innerText = text;
+        }
+    
+        content.appendChild(bubble);
+        row.appendChild(content);
+    
+        // Inject row frame directly into scrolling chat timeline panel
+        messagesContainer.appendChild(row);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto Scroll
+    }
+
+    
+
+    // ================================================ Send question to /ask and display answer
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const question = input.value.trim();
+        if (!question) return;
+
+        // Show user message
+        appendMessage('user', question);
+        input.value = '';
+
+        // Hide welcome screen after first message
+        const welcome = document.querySelector('.welcome-screen');
+        if (welcome) welcome.style.display = 'none';
+
+        // Show loading indicator
+        appendMessage('haru', 'thinking...');
+
+        try {
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question: question})
+            });
+            const data = await response.json();
+
+            // Remove loading message
+            const messages = document.getElementById('chatMessages');
+            messages.removeChild(messages.lastChild);
+
+            // Show HARU answer
+            appendMessage('haru', data.answer || data.error);
+
+        } catch (error) {
+            const messages = document.getElementById('chatMessages');
+            messages.removeChild(messages.lastChild);
+            appendMessage('haru', 'Hmm, something went wrong.... how about try again.');
+        }
+    }
+
+    // ================================================ Send on button click
+    document.querySelector('.send-btn').addEventListener('click', sendMessage);
+
+    // ================================================ Send on Enter key
+    document.getElementById('chatInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    
+    // ================================================ Modal: open, close, predict, submit
+    let currentDirection = 'expense';
+
+    function openModal(direction) {
+        currentDirection = direction;
+        document.getElementById('modalTitle').innerText = 
+            direction === 'income' ? '💰 Log Income' : '📉 Record Expense';
+        
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('txDate').value = today;
+        document.getElementById('txCounterparty').value = '';
+        document.getElementById('txReference').value = '';
+        document.getElementById('txAmount').value = '';
+        document.getElementById('txPlace').value = '';
+        document.getElementById('txNote').value = '';
+        document.getElementById('txCategory').value = '';
+        document.getElementById('suggestedCategory').innerText = '—';
+
+        document.getElementById('transactionModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('transactionModal').style.display = 'none';
+    }
+
+    async function predictCategory() {
+        const counterparty = document.getElementById('txCounterparty').value.trim();
+        const reference = document.getElementById('txReference').value.trim();
+        
+        if (!counterparty) {
+            alert('Please enter a description first.');
+            return;
+        }
+
+        const response = await fetch('/predict-category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({counterparty, reference})
+        });
+        const data = await response.json();
+        
+        document.getElementById('suggestedCategory').innerText = data.category;
+        document.getElementById('txCategory').value = data.category;
+    }
+
+    async function submitTransaction() {
+        const date = document.getElementById('txDate').value;
+        const counterparty = document.getElementById('txCounterparty').value.trim();
+        const amount = parseFloat(document.getElementById('txAmount').value);
+        const category = document.getElementById('txCategory').value;
+
+        if (!date || !counterparty || !amount || !category) {
+            alert('Please fill in Date, Description, Amount and Category.');
+            return;
+        }
+
+        const finalAmount = currentDirection === 'expense' ? -Math.abs(amount) : Math.abs(amount);
+
+        const payload = {
+            date,
+            counterparty,
+            reference: document.getElementById('txReference').value.trim(),
+            amount: finalAmount,
+            direction: currentDirection,
+            place: document.getElementById('txPlace').value.trim() || null,
+            note: document.getElementById('txNote').value.trim() || null,
+            category
+        };
+
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = 'Saving...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                closeModal();
+                const welcome = document.querySelector('.welcome-screen');
+                if (welcome) welcome.style.display = 'none';
+                appendMessage('haru', 
+                    `✅ Saved! "${counterparty}" — €${Math.abs(amount).toFixed(2)} logged as ${data.predicted_category}.`
+                );
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (err) {
+            alert('Something went wrong. Please try again.');
+        } finally {
+            btn.innerText = 'Save';
+            btn.disabled = false;
+        }
+    }
+
+    // ===================================================================== upload csv
+    async function uploadCSV(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        appendMessage('haru', `📂 Processing "${file.name}"...`);
+
+        const welcome = document.querySelector('.welcome-screen');
+        if (welcome) welcome.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/upload-csv', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                appendMessage('haru',
+                    `✅ Import complete! ${data.inserted} new transactions added, ${data.skipped} duplicates skipped.`
+                );
+            } else {
+                appendMessage('haru', '❌ Error: ' + data.error);
+            }
+        } catch (err) {
+            appendMessage('haru', '❌ Something went wrong during upload.');
+        }
+
+    // Reset input so same file can be re-uploaded if needed
+    input.value = '';
+    }
+
+    
+    </script>
+
+    <!---------------------------------------------------- Transaction Modal ---------------------------------------------------->
+    <div id="transactionModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="modalTitle">Log Transaction</h2>
+                <button onclick="closeModal()" class="modal-close">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <label>Date</label>
+                <input type="date" id="txDate" />
+
+                <label>Description / Merchant</label>
+                <input type="text" id="txCounterparty" placeholder="e.g. REWE, Salary, BackWerk" />
+
+                <label>Reference (optional)</label>
+                <input type="text" id="txReference" placeholder="e.g. monthly groceries" />
+
+                <label>Amount (€)</label>
+                <input type="number" id="txAmount" step="0.01" placeholder="e.g. 25.50" />
+
+                <label>Place (optional)</label>
+                <input type="text" id="txPlace" placeholder="e.g. Aachen, Düsseldorf, etc." />
+
+                <label>Note (optional)</label>
+                <input type="text" id="txNote" placeholder="e.g. shopping center, Flohmarkt, etc." />
+
+                <label>Suggested Category</label>
+                <div class="category-row">
+                    <span id="suggestedCategory" class="category-badge">—</span>
+                    <button onclick="predictCategory()" class="predict-btn">Suggest</button>
+                </div>
+
+                <label>Category (confirm or change)</label>
+                <select id="txCategory">
+                    <option value="">-- select --</option>
+                    <option>groceries</option>
+                    <option>restaurant</option>
+                    <option>café</option>
+                    <option>transportation</option>
+                    <option>parking</option>
+                    <option>car</option>
+                    <option>housing</option>
+                    <option>shopping</option>
+                    <option>internet bill</option>
+                    <option>electricity bill</option>
+                    <option>gas bill</option>
+                    <option>radio bill</option>
+                    <option>banking bill</option>
+                    <option>medical bill</option>
+                    <option>leisure</option>
+                    <option>sport</option>
+                    <option>donation</option>
+                    <option>documents</option>
+                    <option>child allowance</option>
+                    <option>salary</option>
+                    <option>salary tax</option>
+                    <option>internal</option>
+                    <option>others</option>
+                </select>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closeModal()" class="btn-cancel">Cancel</button>
+                <button onclick="submitTransaction()" class="btn-submit" id="submitBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

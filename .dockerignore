@@ -1,0 +1,14 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+*.ipynb
+.ipynb_checkpoints/
+.git
+.gitignore
+notebooks/
+*.csv
+.pytest_cache/
+.DS_Store
+Thumbs.db
+README.md
